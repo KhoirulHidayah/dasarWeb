@@ -1,89 +1,52 @@
-<html>
-    <body>
-        <div class="container-fluid">
-            <div class="row">
-                <?php
-                    require 'admin/template/menu.php';
-                ?>
-                <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<?php
+session_start();
+if (!empty($_SESSION['username'])) {
+    require '../config/koneksi.php';
+    require '../fungsi/pesan_kilat.php';
+    require '../fungsi/anti_injection.php';
+    if (!empty($_GET['jabatan'])) {
+        $jabatan = antiinjection($koneksi, $_POST['jabatan']);
+        $keterangan = antiinjection($koneksi, $_POST['keterangan']);
+        $query = "INSERT INTO jabatan (jabatan, keterangan) VALUES('$jabatan', '$keterangan')";
+        if (mysqli_query($koneksi, $query)) {
+            pesan(
+                'success',
+                "Jabatan Baru Ditambahkan."
+            );
+        } else {
+            pesan('danger', "Gagal Menambahkan Jabatan Karena: " . mysqli_error($koneksi));
+        }
+        header("Location: ../index.php?page=jabatan");
+    } elseif (!empty($_GET['anggota'])) {
+        $username = antiinjection($koneksi, $_POST['username']);
+        $password = antiinjection($koneksi, $_POST['password']);
+        $level = antiinjection($koneksi, $_POST['level']);
+        $jabatan = antiinjection($koneksi, $_POST['jabatan']);
+        $nama = antiinjection($koneksi, $_POST['nama']);
+        $jenis_kelamin = antiinjection($koneksi, $_POST['jenis_kelamin']);
+        $alamat = antiinjection($koneksi, $_POST['alamat']);
+        $no_telp = antiinjection($koneksi, $_POST['no_telp']);
 
-                        <h1 class="h2">Jabatan</h1>
-                    </div>
-                    <div class="row">
-                        <div class="col-lg-2">
-                            <button type="button" class="btn btn-primary" data-bs-toggle="modal"data-bs-target="#exampleModal" data-bs-whatever="@mdo">
-                                <i class="fa fa-plus"></i> Tambah Jabatan</button>
-                        </div>
-                    </div>
-                    <?php if (isset($_SESSION['_flashdata'])) {
-                        echo "<br>";
-                        foreach ($_SESSION['_flashdata'] as $key => $val) { 
-                            echo get_flashdata($key);
-                        }
-                    }
-                    ?>
-                    <div class="table-responsive small">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th scope="col">No</th>
-                                    <th scope="col">Jabatan</th>
-                                    <th scope="col">Keterangan</th>
-                                    <th scope="col">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php 
-                                $no = 1;
-                                $query = "SELECT * FROM jabatan order by id desc";
-                                $result = mysqli_query($koneksi, $query);
-                                while ($row = mysqli_fetch_assoc($result)) {
-                                ?>
-                                    <tr>
-                                        <th scope="row"><?= $no++; ?></th>
-                                        <td><?= $row['jabatan']; ?></td>
-                                        <td><?= $row['keterangan']; ?></td> 
-                                        <td>
-                                            <a href="index.php?page=jabatan/edit&id=<?php echo $row['id']; ?>" class="btn btn-warning btn-xs"><i class="fa fa-pencil-square-o" aria-hidden="true"></i> Edit</a> 
-                                            <a href="fungsi/hapus.php?jabatan=hapus&id=<?php echo $row['id']; ?>" onclick="javascript:return confirm('Hapus Data Jabatan ?');" class="btn btn-danger btn-xs"><i class="fa fa-trash-o" aria-hidden="true"></i> Hapus</a>
-                                        </td>
-                                    </tr>
-                                <?php 
-                                } 
-                                ?> 
-                            </tbody>
-                    </table>
-                </div>
-                
-                <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h1 class="modal-title fs-5" id="exampleModalLabel">Form Jabatan</h1> 
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <form action="fungsi/tambah.php?jabatan=tambah" method="POST">
-                                <div class="modal-body">
-                                    <div class="mb-3">
-                                        <label for="recipient-name" class="col-form-label">Nama Jabatan:</label>
-                                        <input type="text" name="jabatan" class="form-control" id="recipient-name">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="message-text" class="col-form-label">Keterangan:</label>
-                                        <textarea class="form-control" name="keterangan" id="message-text"></textarea>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-times" aria-hidden="true"></i> Close</button> 
-                                    <button type="submit" class="btn btn-primary"><i class="fa fa-floppy-o" aria-hidden="true"></i> Simpan</button>
-                                </div> 
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </div>
-        </div>
-    </body>
-</html>
+        $salt = bin2hex(random_bytes(16));
+        $combined_password = $salt . $password;
+        $hashed_password = password_hash($combined_password, PASSWORD_BCRYPT);
+
+        $query = "INSERT INTO user (username, password, salt, level) VALUES ('$username', '$hashed_password', '$salt','$level')";
+
+        if (mysqli_query($koneksi, $query)) {
+            $last_id = mysqli_insert_id($koneksi);
+            $query2 = "INSERT INTO anggota (nama, jenis_kelamin, alamat, no_telp, user_id, jabatan_id) VALUES ('$nama', '$jenis_kelamin', '$alamat', '$no_telp', '$last_id','$jabatan')";
+
+            if (mysqli_query($koneksi, $query2)) {
+                pesan('success', "Anggota Baru Ditambahkan.");
+            } else {
+                pesan('warning', "Gagal Menabahkan Anggota Tetapi Data Login Tersimpan Karena: " . mysqli_error($koneksi));
+            }
+        } else {
+            pesan('danger', "Gagal Menambahkan Anggota Karena: " . mysqli_error($koneksi));
+        }
+        header("Location: ../index.php?page=anggota");
+    }
+} else {
+    header("Location: ../index.php?page=login");
+}
